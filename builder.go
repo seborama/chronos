@@ -2,7 +2,7 @@ package chronos
 
 type Builder struct {
 	skip         *bool
-	samplingRate *int32
+	samplingRate *uint32
 }
 
 func (b Builder) WithSkip() *Builder {
@@ -11,7 +11,7 @@ func (b Builder) WithSkip() *Builder {
 	return &b
 }
 
-func (b Builder) WithSamplingRate(val int32) *Builder {
+func (b Builder) WithSamplingRate(val uint32) *Builder {
 	b.samplingRate = &val
 	return &b
 }

@@ -8,7 +8,7 @@ import (
 
 type chronometer interface {
 	Elapsed() time.Duration
-	Count() int32
+	Count() uint64
 	Println(label string)
 }
 
@@ -28,26 +28,43 @@ func (c *Cohort) Add(els ...chronometer) {
 	c.members = append(c.members, els...)
 }
 
-func (c *Cohort) Metrics() (e time.Duration, cnt uint64) {
+type Metrics struct {
+	Elapsed time.Duration
+	Count   uint64
+	Average time.Duration
+}
+
+func (c *Cohort) Metrics() Metrics {
+	var (
+		e   time.Duration
+		cnt uint64
+	)
+
 	for _, ch := range c.members {
 		e += ch.Elapsed() // SIGSEGV (????)
 		cnt += uint64(ch.Count())
 	}
 
-	return
+	var avg time.Duration
+	if cnt > 0 {
+		avg = time.Duration(int64(e) / int64(cnt))
+	}
+
+	return Metrics{
+		Elapsed: e,
+		Count:   cnt,
+		Average: avg,
+	}
 }
 
 func (c *Cohort) Println(label string) {
-	e, cnt := c.Metrics()
+	m := c.Metrics()
 
-	if cnt == 0 {
+	if m.Count == 0 {
 		fmt.Println(label, ">> no data")
 		return
 	}
 
-	avg := time.Duration(int64(e) / int64(cnt))
-	// tcd: total cumulative duration
-	// mpt: mean per thread
-	mpt := time.Duration(int64(e) / int64(len(c.members)))
-	fmt.Println(label, ">> c:", cnt, "tcd:", e, "avg:", avg, "mpt:", mpt)
+	meanPerThread := time.Duration(int64(m.Elapsed) / int64(len(c.members)))
+	fmt.Println(label, ">> count:", m.Count, "total-cumulative-duration:", m.Elapsed, "avg:", m.Average, "mean-per-thread:", meanPerThread)
 }

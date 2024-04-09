@@ -13,9 +13,9 @@ type ChronosTS struct {
 	elapsed       time.Duration
 	clock         time.Time
 	clockIsActive bool
-	count         int32
-	samplingRate  int32
-	samplingCount int32
+	count         uint64
+	samplingRate  uint32 // default value must be >= 1
+	samplingCount uint32 // default value must be 0
 }
 
 func (c *ChronosTS) Skip() {
@@ -75,13 +75,17 @@ func (c *ChronosTS) Elapsed() time.Duration {
 
 // Count returns the count of durations measured.
 // It will wait for the timer to stop.
-func (c *ChronosTS) Count() int32 {
+func (c *ChronosTS) Count() uint64 {
 	if c.skip {
 		return 0
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	return c.count
+}
+
+func (c *ChronosTS) Metrics() Metrics {
+	return metrics(c)
 }
 
 // Println returns information about this chronometer.
@@ -91,18 +95,27 @@ func (c *ChronosTS) Println(label string) {
 		return
 	}
 
-	printLn(c, label)
+	m := c.Metrics()
+	printLn(m, label)
 }
 
-func printLn(c chronometer, label string) {
-	if c.Count() == 0 {
+func metrics(c chronometer) Metrics {
+	e := c.Elapsed()
+	cnt := c.Count()
+	avg := time.Duration(int64(e) / int64(cnt))
+
+	return Metrics{
+		Elapsed: e,
+		Count:   cnt,
+		Average: avg,
+	}
+}
+
+func printLn(m Metrics, label string) {
+	if m.Count == 0 {
 		fmt.Println(label, ">> no data")
 		return
 	}
 
-	avg := time.Duration(int64(c.Elapsed()) / int64(c.Count()))
-	// c: count
-	// e: elapsed
-	// avg: average
-	fmt.Println(label, ">> c:", c.Count(), "e:", c.Elapsed(), "avg:", avg)
+	fmt.Println(label, ">> count:", m.Count, "elapsed:", m.Elapsed, "avg:", m.Average)
 }

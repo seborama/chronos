@@ -12,9 +12,9 @@ type Chronos struct {
 	elapsed       time.Duration
 	clock         time.Time
 	clockIsActive bool
-	count         int32
-	samplingRate  int32 // default value must be >= 1
-	samplingCount int32 // default value must be 0
+	count         uint64
+	samplingRate  uint32 // default value must be >= 1
+	samplingCount uint32 // default value must be 0
 }
 
 func (c *Chronos) Skip() {
@@ -68,11 +68,15 @@ func (c *Chronos) Elapsed() time.Duration {
 
 // Count returns the count of durations measured.
 // It will NOT wait for the timer to stop.
-func (c *Chronos) Count() int32 {
+func (c *Chronos) Count() uint64 {
 	if c.skip {
 		return 0
 	}
 	return c.count
+}
+
+func (c *Chronos) Metrics() Metrics {
+	return metrics(c)
 }
 
 // Println returns information about this chronometer.
@@ -82,5 +86,6 @@ func (c *Chronos) Println(label string) {
 		return
 	}
 
-	printLn(c, label)
+	m := c.Metrics()
+	printLn(m, label)
 }
